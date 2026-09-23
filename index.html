@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>К4ТВ · Статистика — пульт оператора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Russo+One&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ СВЕТЛАЯ ТЕМА ПО УМОЛЧАНИЮ (+ тёмная как опция) ============ */
+:root{
+  --bg:#e9edf3; --panel:#ffffff; --panel2:#f3f5f9;
+  --line:#e3e8f0; --line2:#cfd6e1;
+  --text:#232a35; --muted:#5d6a7d; --dim:#96a0b0;
+  --chip:#eef1f6; --chip-ink:#232a35;
+  --amber:#ffb62e; --amber-ink:#241703; --amber-text:#9a6a00; --amber-soft:#fff4da;
+  --ok:#118a52; --err:#d4402f;
+  --danger-bg:#fdeceb; --danger-line:#efb3ac; --danger-text:#b3362a;
+  --pv-bg:#dfe4ee; --track:#d9dfe8; --code-bg:#f1f4f8;
+}
+html[data-theme="dark"]{
+  --bg:#0b0e13; --panel:#10141b; --panel2:#151a23;
+  --line:#20262f; --line2:#2a3341;
+  --text:#e8ecf2; --muted:#8a93a2; --dim:#66707e;
+  --chip:#0a0d12; --chip-ink:#f2f4f8;
+  --amber-text:#ffb62e; --amber-soft:rgba(255,182,46,.08);
+  --ok:#3fd68f; --err:#ff5d54;
+  --danger-bg:#36140f; --danger-line:#6e2a22; --danger-text:#ff9585;
+  --pv-bg:#1b212b; --track:#1c222c; --code-bg:#0b0f15;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Oswald','Arial Narrow',Arial,sans-serif;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;user-select:none;cursor:pointer;touch-action:manipulation}
+svg{display:block}
+
+/* ---------- шапка (липкая) ---------- */
+.top{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:1px solid var(--line);
+  padding:calc(8px + env(safe-area-inset-top)) 14px 10px;display:flex;flex-direction:column;gap:9px}
+.top-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand{display:flex;gap:10px;align-items:center;min-width:0}
+.k4{font-family:'Russo One';background:var(--amber);color:var(--amber-ink);font-size:16px;padding:7px 9px 6px;clip-path:polygon(0 0,100% 0,100% 100%,9px 100%,0 calc(100% - 9px))}
+.brand>div{min-width:0}
+.brand b{font-family:'Russo One';font-weight:400;font-size:14px;letter-spacing:.05em;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;color:var(--dim);font-size:8.5px;letter-spacing:.2em;margin-top:2px;white-space:nowrap}
+.top-tools{display:flex;align-items:center;gap:8px;flex:none}
+.status{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.12em;color:var(--muted);font-weight:600;max-width:118px;white-space:nowrap;overflow:hidden}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.status.ok{color:var(--ok)}.status.ok i{background:var(--ok)}
+.status.warn{color:var(--amber-text)}.status.warn i{background:var(--amber-text)}
+.status.err{color:var(--err)}.status.err i{background:var(--err)}
+.link-row{display:flex;align-items:center;gap:8px}
+#overlayUrl{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line2);color:var(--muted);font:400 13px 'JetBrains Mono',monospace;padding:10px 10px;outline:none}
+.iconbtn{width:38px;height:38px;flex:none;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line2);color:var(--muted)}
+.iconbtn:active{border-color:var(--amber-text);color:var(--amber-text)}
+.iconbtn svg{width:17px;height:17px}
+
+/* ---------- каркас: одна колонка ---------- */
+main{max-width:540px;margin:0 auto;padding:14px 14px 26px;display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line)}
+.p-head{padding:11px 14px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.18em;color:var(--muted);font-weight:600}
+
+/* ---------- превью ---------- */
+.preview{border:1px solid var(--line);background:var(--panel)}
+.pv-head{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-size:10px;letter-spacing:.18em;color:var(--muted);border-bottom:1px solid var(--line);font-weight:600}
+.pv-live{display:flex;align-items:center;gap:6px;color:var(--amber-text);letter-spacing:.28em}
+.pv-live i{width:6px;height:6px;background:var(--amber-text);border-radius:50%;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.pv-frame{position:relative;aspect-ratio:16/9;background:var(--pv-bg);overflow:hidden}
+.pv-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+/* ---------- тумблер «автотабло» ---------- */
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.switch-row em{font-style:normal;font-size:12px;letter-spacing:.05em;color:var(--muted)}
+.switch{position:relative;flex:none;width:46px;height:26px}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.switch i{position:absolute;inset:0;background:var(--track);border:1px solid var(--line2);transition:.2s;pointer-events:none}
+.switch i::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border:1px solid var(--line2);transition:.2s}
+.switch input:checked + i{background:var(--amber);border-color:var(--amber)}
+.switch input:checked + i::after{left:23px;border-color:var(--amber-ink)}
+
+/* ---------- кнопки модулей ленты ---------- */
+.btn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px 4px}
+@media (max-width:359px){.btn-grid{grid-template-columns:repeat(2,1fr)}}
+.modbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:72px;padding:8px 4px;background:var(--panel2);border:1px solid var(--line2);
+  clip-path:polygon(0 0,10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+.modbtn svg{width:20px;height:20px;color:var(--muted)}
+.modbtn span{font:600 10.5px Oswald;letter-spacing:.08em;color:var(--text);text-align:center;line-height:1.25}
+.modbtn em{font:600 9px Oswald;letter-spacing:.16em;color:var(--dim);font-style:normal}
+.modbtn:active{transform:scale(.97)}
+.modbtn.on{border-color:var(--amber);background:var(--amber-soft)}
+.modbtn.on svg,.modbtn.on em{color:var(--amber-text)}
+.row-actions{display:flex;gap:8px;padding:10px 14px 14px}
+.row-actions button{flex:1;min-height:46px}
+
+.primary{background:var(--amber);color:var(--amber-ink);border:0;font:600 12px Oswald;letter-spacing:.16em;padding:12px 16px;
+  clip-path:polygon(0 0,10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+.primary:active{background:#ffc355}
+.danger{background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger-line);font:600 12px Oswald;letter-spacing:.16em;padding:12px 16px;
+  clip-path:polygon(0 0,10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted);font:600 11px Oswald;letter-spacing:.14em;padding:11px 14px}
+.ghost:active{border-color:var(--amber-text);color:var(--amber-text)}
+
+/* ---------- сводная панель ---------- */
+.ct-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+#centerToggle{width:100%;min-height:48px}
+.focus-row{display:none;flex-direction:column;gap:8px}
+.center-panel.live .focus-row{display:flex}
+.fl{font-size:9.5px;letter-spacing:.2em;color:var(--dim);font-weight:600}
+#focusBtns{display:flex;gap:8px;flex-wrap:wrap}
+.fbtn{background:var(--panel2);border:1px solid var(--line2);color:var(--muted);font:600 10.5px Oswald;letter-spacing:.1em;padding:10px 12px;min-height:40px}
+.fbtn:active{border-color:var(--amber-text);color:var(--amber-text)}
+.fbtn.on{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+
+/* ---------- счётчики метрик ---------- */
+.cnt-legend{display:flex;align-items:center;gap:7px;padding:10px 14px 0;font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.cnt-legend s{text-decoration:none;color:var(--dim)}
+.cnt-legend b{font-weight:500;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini{width:9px;height:9px;flex:none;background:var(--home)}
+.mini.a{background:var(--away)}
+.cnt-row{padding:12px 14px;border-bottom:1px solid var(--line)}
+.cnt-row:last-child{border-bottom:none}
+.cnt-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.cnt-top svg{flex:none;width:16px;height:16px;color:var(--amber-text)}
+.cnt-top span{font:600 12px Oswald;letter-spacing:.1em;color:var(--text)}
+.cnt-ctrls{display:flex;gap:10px}
+.cnt{flex:1;display:flex;align-items:stretch}
+.cnt button{flex:1;min-height:46px;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font:600 20px Oswald}
+.cnt button:active{border-color:var(--amber-text);color:var(--amber-text)}
+.cnt-val{flex:none;width:58px;display:flex;align-items:center;justify-content:center;margin:0 4px;font-family:'Russo One';font-size:21px;background:var(--chip);color:var(--chip-ink);border-bottom:3px solid var(--home);cursor:text}
+.cnt.a .cnt-val{border-bottom-color:var(--away)}
+.inline-edit{width:64px;background:var(--panel);border:1px solid var(--amber);color:var(--text);font:400 18px 'Russo One';text-align:center;padding:4px 2px;outline:none}
+
+/* ---------- команды и счёт ---------- */
+.tb{padding:13px 14px;border-bottom:1px solid var(--line)}
+.tb-head{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.18em;color:var(--muted);margin-bottom:9px;font-weight:600}
+.swatch{width:13px;height:13px;background:var(--home);flex:none}
+.tb input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font:500 16px Oswald;letter-spacing:.04em;padding:11px 12px;text-transform:uppercase;outline:none}
+.tb input[type=text]:focus{border-color:var(--amber-text)}
+.color-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:10px;letter-spacing:.14em;color:var(--dim);font-weight:600}
+.color-row code{font:11px 'JetBrains Mono';color:var(--muted)}
+input[type=color]{width:46px;height:34px;border:1px solid var(--line2);background:var(--panel2);padding:0;cursor:pointer;-webkit-appearance:none}
+input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+input[type=color]::-webkit-color-swatch{border:none}
+.tb.guest{margin:10px 14px;border:1px solid var(--amber);background:var(--amber-soft)}
+.tb.guest .tb-head{color:var(--amber-text)}
+.tb.guest input[type=color]{width:60px;height:42px}
+.tb.guest .color-row code{font-size:12px}
+
+.sb{padding:14px 14px 4px}
+.sb-title{font-size:10px;letter-spacing:.18em;color:var(--muted);font-weight:600;margin-bottom:2px}
+.sb-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+.sb-team{flex:1;min-width:0;display:flex;gap:8px;align-items:center;font-size:12.5px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;white-space:nowrap;overflow:hidden}
+.sb-team span{overflow:hidden;text-overflow:ellipsis}
+.sb-team.right{justify-content:flex-end}
+.sb-ctrl{display:flex;align-items:center;gap:6px;flex:none}
+.sb-ctrl button{width:46px;height:46px;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font:600 22px Oswald}
+.sb-ctrl button:active{border-color:var(--amber-text);color:var(--amber-text)}
+.sb-val{font-family:'Russo One';font-size:23px;min-width:52px;text-align:center;background:var(--chip);color:var(--chip-ink);border-bottom:3px solid var(--home);padding:8px 6px;cursor:text}
+.sb-val.a{border-bottom-color:var(--away)}
+.resets{display:flex;gap:10px;padding:12px 14px 14px}
+.resets button{flex:1;min-height:44px}
+
+/* ---------- синхронизация ---------- */
+details.sync{border:1px solid var(--line);background:var(--panel)}
+details.sync summary{cursor:pointer;padding:12px 14px;font-size:10px;letter-spacing:.18em;color:var(--muted);list-style:none;user-select:none;font-weight:600}
+details.sync summary::-webkit-details-marker{display:none}
+details.sync summary::before{content:'▸ ';color:var(--amber-text)}
+details.sync[open] summary::before{content:'▾ '}
+.sync-body{padding:0 14px 14px;color:var(--muted);font-size:12px;line-height:1.6}
+.sync-body label{display:block;font-size:9.5px;letter-spacing:.18em;color:var(--dim);margin:8px 0 6px;font-weight:600}
+.sync-row{display:flex;gap:8px}
+.sync-row input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font:400 16px 'JetBrains Mono';padding:9px 10px;outline:none}
+.sync-row .ghost{padding:9px 12px;flex:none}
+pre{background:var(--code-bg);border:1px solid var(--line);padding:10px 12px;font:11px 'JetBrains Mono';color:var(--text);overflow:auto;margin:8px 0}
+.sync-body code{font:11px 'JetBrains Mono';color:var(--amber-text)}
+
+/* ---------- тост ---------- */
+#toast{position:fixed;left:16px;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));margin:0 auto;max-width:440px;
+  background:var(--panel);border:1px solid var(--line2);border-left:3px solid var(--amber);color:var(--text);
+  padding:12px 16px;font:500 13px Oswald;letter-spacing:.05em;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;z-index:60}
+#toast.show{opacity:1;transform:none}
+
+/* ховер — только для устройств с мышью */
+@media (hover:hover){
+  .iconbtn:hover{border-color:var(--amber-text);color:var(--amber-text)}
+  .modbtn:hover{border-color:var(--amber)}
+  .cnt button:hover,.sb-ctrl button:hover{border-color:var(--amber-text);color:var(--amber-text)}
+  .fbtn:hover,.ghost:hover{border-color:var(--amber-text);color:var(--amber-text)}
+  .primary:hover{background:#ffc355}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand">
+      <span class="k4">К4</span>
+      <div><b>СТАТИСТИКА К4ТВ</b><small>ПУЛЬТ ОПЕРАТОРА</small></div>
+    </div>
+    <div class="top-tools">
+      <div class="status" id="status"><i></i><span id="statusText">ПОДКЛЮЧЕНИЕ…</span></div>
+      <button class="iconbtn" id="themeBtn" title="Светлая / тёмная тема"></button>
+    </div>
+  </div>
+  <div class="link-row">
+    <input id="overlayUrl" readonly>
+    <button class="iconbtn" id="copyBtn" title="Копировать ссылку">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15h-.8A1.2 1.2 0 0 1 3 13.8V4.2A1.2 1.2 0 0 1 4.2 3h9.6A1.2 1.2 0 0 1 15 4.2V5"/></svg>
+    </button>
+    <button class="iconbtn" id="openBtn" title="Открыть overlay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h4.7"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- превью эфира -->
+  <section class="preview">
+    <div class="pv-head"><span>ПРЕВЬЮ ЭФИРА · OBS</span><span class="pv-live"><i></i>LIVE</span></div>
+    <div class="pv-frame"><iframe src="overlay.html" title="overlay"></iframe></div>
+  </section>
+
+  <!-- нижняя лента -->
+  <div class="panel">
+    <div class="p-head"><span>НИЖНЯЯ ЛЕНТА · ВНИЗУ ПО ЦЕНТРУ</span></div>
+    <label class="switch-row">
+      <em>табло с командами рядом с метриками</em>
+      <span class="switch"><input type="checkbox" id="autoScore"><i></i></span>
+    </label>
+    <div class="btn-grid" id="modBtns"></div>
+    <div class="row-actions">
+      <button class="primary" id="showAll">ВСЁ СПИСКОМ</button>
+      <button class="ghost" id="hideAll">СКРЫТЬ ВСЁ</button>
+    </div>
+  </div>
+
+  <!-- сводная статистика -->
+  <div class="panel center-panel" id="centerPanel">
+    <div class="p-head"><span>СВОДНАЯ СТАТИСТИКА · ЦЕНТР ЭКРАНА</span></div>
+    <div class="ct-body">
+      <button class="primary" id="centerToggle">ВЫВЕСТИ В ЭФИР</button>
+      <div class="focus-row" id="focusRow">
+        <span class="fl">ФОКУС ВЕДУЩЕГО</span>
+        <div id="focusBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- счётчики метрик -->
+  <div class="panel">
+    <div class="p-head"><span>СЧЁТЧИКИ МЕТРИК</span></div>
+    <div class="cnt-legend"><i class="mini"></i><b id="lgH"></b><s>·</s><i class="mini a"></i><b id="lgA"></b></div>
+    <div id="cntRows"></div>
+  </div>
+
+  <!-- матч: команды, формы, счёт -->
+  <div class="panel">
+    <div class="p-head"><span>МАТЧ · КОМАНДЫ И СЧЁТ</span></div>
+
+    <div class="tb">
+      <div class="tb-head"><i class="swatch" id="hdSw"></i><span>ДОМАШНЯЯ</span></div>
+      <input type="text" id="homeName" spellcheck="false" autocomplete="off" autocapitalize="characters">
+      <div class="color-row"><span>ЦВЕТ</span><input type="color" id="homeColor"><code id="homeHex"></code></div>
+    </div>
+
+    <div class="tb guest">
+      <div class="tb-head"><i class="swatch" id="awSw"></i><span>ГОСТИ · МЕТКА ФОРМЫ</span></div>
+      <input type="text" id="awayName" spellcheck="false" autocomplete="off" autocapitalize="characters">
+      <div class="color-row"><span>ЦВЕТ ФОРМЫ</span><input type="color" id="awayColor"><code id="awayHex"></code></div>
+    </div>
+
+    <div class="sb">
+      <div class="sb-title">СЧЁТ</div>
+      <div class="sb-row">
+        <div class="sb-team"><i class="mini" id="sbHd"></i><span id="sbHn"></span></div>
+        <div class="sb-ctrl"><button id="decH">−</button><span class="sb-val" id="sbHv">0</span><button id="incH">+</button></div>
+      </div>
+      <div class="sb-row">
+        <div class="sb-team right"><span id="sbAn"></span><i class="mini a" id="sbAd"></i></div>
+        <div class="sb-ctrl"><button id="decA">−</button><span class="sb-val a" id="sbAv">0</span><button id="incA">+</button></div>
+      </div>
+    </div>
+
+    <div class="resets">
+      <button class="ghost" id="resetStats">ОБНУЛИТЬ МЕТРИКИ</button>
+      <button class="ghost" id="resetMatch">НОВЫЙ МАТЧ</button>
+    </div>
+  </div>
+
+  <details class="sync">
+    <summary>СИНХРОНИЗАЦИЯ · FIREBASE</summary>
+    <div class="sync-body">
+      <p>Пульт и overlay связаны через Realtime Database проекта <code>mini-foot-stat</code>. В консоли Firebase создайте базу и откройте правила:</p>
+      <pre>{ "rules": { ".read": true, ".write": true } }</pre>
+      <label>DATABASE URL (если база не находится автоматически)</label>
+      <div class="sync-row">
+        <input id="dbUrlInput" placeholder="https://…firebasedatabase.app">
+        <button class="ghost" id="dbApply">ОК</button>
+      </div>
+      <p style="margin-top:8px">Если URL задан вручную, добавьте его и к ссылке overlay: <code>?db=…</code>. Пустое поле — автоподбор.</p>
+    </div>
+  </details>
+
+</main>
+
+<div id="toast"></div>
+
+<script type="module">
+/* ================= КОНФИГУРАЦИЯ ================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyADAluZKWJz3polD5ban0AUqB38YmFO5k0",
+  authDomain: "mini-foot-stat.firebaseapp.com",
+  projectId: "mini-foot-stat",
+  storageBucket: "mini-foot-stat.firebasestorage.app",
+  messagingSenderId: "397513904145",
+  appId: "1:397513904145:web:c00c2709b68d63553461b0"
+};
+const PATH = 'k4tv';
+const URL_CANDIDATES = [...new Set([
+  new URLSearchParams(location.search).get('db'),
+  (()=>{try{return localStorage.getItem('k4tv_dburl')}catch{return null}})(),
+  'https://mini-foot-stat-default-rtdb.firebaseio.com',
+  'https://mini-foot-stat-default-rtdb.europe-west1.firebasedatabase.app'
+].filter(Boolean))];
+
+const METRICS = [
+  {k:'shots',   label:'УДАРЫ ПО ВОРОТАМ'},
+  {k:'combo',   label:'СЕРИИ ИЗ 3-Х ПЕРЕДАЧ'},
+  {k:'tackles', label:'ОТБОРЫ'},
+  {k:'fouls',   label:'НАРУШЕНИЯ'},
+  {k:'ycards',  label:'ЖЁЛТЫЕ КАРТОЧКИ'}
+];
+const ICONS = {
+  score:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.8" width="17.6" height="12.4" rx="1.8"/><path d="M8.2 9.4h2.6M13.2 9.4h2.6M8.6 13.4h6.8"/><path d="M9.4 20.4h5.2"/></svg>',
+  shots:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.9l4.1 3-1.6 4.7h-5l-1.6-4.7z"/></svg>',
+  combo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="4.6" cy="17.2" r="1.8"/><circle cx="12" cy="7.4" r="1.8"/><circle cx="19.4" cy="17.2" r="1.8"/><path d="M6.1 15.6l4.7-6.4M13.2 9.2l4.7 6.4"/></svg>',
+  tackles:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.1l6.9 2.9v5.1c0 4.6-3 7.7-6.9 9.8-3.9-2.1-6.9-5.2-6.9-9.8V6z"/></svg>',
+  fouls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.4" cy="14.6" r="5.3"/><path d="M13.3 10.8l7.2-4.4v4.2l-4.2 2.4"/><circle cx="9.4" cy="14.6" r="1.2"/></svg>',
+  ycards:'<svg viewBox="0 0 24 24" fill="#ffd21f"><rect x="7.4" y="3.9" width="9.4" height="16.2" rx="1.5" transform="rotate(7 12 12)"/></svg>'
+};
+
+const DEFAULT_STATE = {
+  rev:0,
+  home:{name:'КОМАНДА 1',color:'#ff5148'},
+  away:{name:'КОМАНДА 2',color:'#45c4ff'},
+  score:{h:0,a:0},
+  stats:{shots:{h:0,a:0},combo:{h:0,a:0},tackles:{h:0,a:0},fouls:{h:0,a:0},ycards:{h:0,a:0}},
+  modules:{score:false,shots:false,combo:false,tackles:false,fouls:false,ycards:false},
+  autoScore:true,
+  center:{on:false,focus:null}
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const byId = id => document.getElementById(id);
+
+function normState(raw){
+  const s = clone(DEFAULT_STATE);
+  if(!raw || typeof raw!=='object') return s;
+  s.rev = raw.rev || 0;
+  if(raw.home) s.home = {...s.home, ...raw.home};
+  if(raw.away) s.away = {...s.away, ...raw.away};
+  if(raw.score) s.score = {...s.score, ...raw.score};
+  if(raw.stats) for(const k in s.stats) if(raw.stats[k]) s.stats[k] = {...s.stats[k], ...raw.stats[k]};
+  if(raw.modules) for(const k in s.modules) if(k in raw.modules) s.modules[k] = !!raw.modules[k];
+  s.autoScore = raw.autoScore !== undefined ? !!raw.autoScore : true;
+  if(raw.center) s.center = {...s.center, ...raw.center};
+  return s;
+}
+
+/* ================= ТЕМА (светлая по умолчанию) ================= */
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>';
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  try{ localStorage.setItem('k4tv_theme', t); }catch{}
+  byId('themeBtn').innerHTML = (t === 'dark') ? SUN : MOON;
+  document.querySelector('meta[name=theme-color]').content = (t === 'dark') ? '#10141b' : '#ffffff';
+}
+applyTheme((()=>{try{return localStorage.getItem('k4tv_theme')}catch{return null}})() === 'dark' ? 'dark' : 'light');
+byId('themeBtn').addEventListener('click', ()=>
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+/* ================= СОСТОЯНИЕ И РАССЫЛКА ================= */
+let state;
+try{ const v = JSON.parse(localStorage.getItem('k4tv_state')); state = v ? normState(v) : clone(DEFAULT_STATE); }
+catch{ state = clone(DEFAULT_STATE); }
+let fbSet = null;
+
+const bc = 'BroadcastChannel' in window ? new BroadcastChannel('k4tv') : null;
+if(bc) bc.onmessage = e => {
+  const m = e.data;
+  if(m && m.t==='state' && m.s && m.s.rev > state.rev){ state = normState(m.s); renderAll(); }
+};
+
+function push(mut){
+  state.rev = (state.rev||0) + 1;
+  if(mut) mut(state);
+  renderAll();
+  try{ localStorage.setItem('k4tv_state', JSON.stringify(state)); }catch{}
+  if(bc) bc.postMessage({t:'state', s:state});
+  if(fbSet) fbSet(state).catch(()=>{});
+}
+
+/* ================= ГЕНЕРАЦИЯ UI ================= */
+const modBtns = byId('modBtns');
+[{k:'score',label:'ТАБЛО И СЧЁТ'}, ...METRICS].forEach(m=>{
+  const b = document.createElement('button');
+  b.className = 'modbtn'; b.dataset.mod = m.k;
+  b.innerHTML = `${ICONS[m.k]}<span>${m.label}</span><em>СКРЫТО</em>`;
+  b.addEventListener('click', ()=> push(s=>{ s.modules[m.k] = !s.modules[m.k]; }));
+  modBtns.appendChild(b);
+});
+
+const focusBtns = byId('focusBtns');
+METRICS.forEach(m=>{
+  const b = document.createElement('button');
+  b.className = 'fbtn'; b.dataset.focus = m.k; b.textContent = m.label;
+  b.addEventListener('click', ()=> push(s=>{ s.center.focus = (s.center.focus===m.k ? null : m.k); }));
+  focusBtns.appendChild(b);
+});
+const resetF = document.createElement('button');
+resetF.className = 'fbtn'; resetF.dataset.focus = ''; resetF.textContent = 'СБРОС';
+resetF.addEventListener('click', ()=> push(s=>{ s.center.focus = null; }));
+focusBtns.appendChild(resetF);
+
+const cntRows = byId('cntRows');
+METRICS.forEach(m=>{
+  const row = document.createElement('div');
+  row.className = 'cnt-row';
+  row.innerHTML =
+    `<div class="cnt-top">${ICONS[m.k]}<span>${m.label}</span></div>`+
+    `<div class="cnt-ctrls">`+
+      `<div class="cnt h"><button data-k="${m.k}" data-s="h" data-d="-1">−</button><span class="cnt-val" id="cnt-${m.k}-h">0</span><button data-k="${m.k}" data-s="h" data-d="1">+</button></div>`+
+      `<div class="cnt a"><button data-k="${m.k}" data-s="a" data-d="-1">−</button><span class="cnt-val" id="cnt-${m.k}-a">0</span><button data-k="${m.k}" data-s="a" data-d="1">+</button></div>`+
+    `</div>`;
+  cntRows.appendChild(row);
+});
+
+/* ================= РЕНДЕР ПУЛЬТА ================= */
+function setVal(id, v){ const el = byId(id); if(el && document.activeElement !== el && el.value !== v) el.value = v; }
+function renderAll(){
+  document.documentElement.style.setProperty('--home', state.home.color);
+  document.documentElement.style.setProperty('--away', state.away.color);
+
+  setVal('homeName', state.home.name); setVal('awayName', state.away.name);
+  setVal('homeColor', state.home.color); setVal('awayColor', state.away.color);
+  byId('homeHex').textContent = state.home.color.toUpperCase();
+  byId('awayHex').textContent = state.away.color.toUpperCase();
+  byId('hdSw').style.background = state.home.color;
+  byId('awSw').style.background = state.away.color;
+
+  byId('sbHn').textContent = state.home.name; byId('sbAn').textContent = state.away.name;
+  byId('sbHd').style.background = state.home.color; byId('sbAd').style.background = state.away.color;
+  byId('lgH').textContent = state.home.name; byId('lgA').textContent = state.away.name;
+
+  if(!byId('sbHv').dataset.editing) byId('sbHv').textContent = state.score.h;
+  if(!byId('sbAv').dataset.editing) byId('sbAv').textContent = state.score.a;
+  METRICS.forEach(m=>{
+    const eh = byId(`cnt-${m.k}-h`), ea = byId(`cnt-${m.k}-a`);
+    if(!eh.dataset.editing) eh.textContent = state.stats[m.k].h;
+    if(!ea.dataset.editing) ea.textContent = state.stats[m.k].a;
+  });
+
+  document.querySelectorAll('.modbtn').forEach(b=>{
+    const on = !!state.modules[b.dataset.mod];
+    b.classList.toggle('on', on);
+    b.querySelector('em').textContent = on ? 'В ЭФИРЕ' : 'СКРЫТО';
+  });
+  byId('autoScore').checked = state.autoScore;
+
+  const ct = byId('centerToggle');
+  ct.textContent = state.center.on ? 'УБРАТЬ ИЗ ЭФИРА' : 'ВЫВЕСТИ В ЭФИР';
+  ct.className = state.center.on ? 'danger' : 'primary';
+  byId('centerPanel').classList.toggle('live', !!state.center.on);
+  document.querySelectorAll('.fbtn').forEach(b=>
+    b.classList.toggle('on', state.center.on && !!b.dataset.focus && state.center.focus === b.dataset.focus));
+}
+
+/* ================= СОБЫТИЯ ================= */
+const debounce = (fn,ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
+byId('homeName').addEventListener('input', debounce(e=>push(s=>{ s.home.name = e.target.value.trim() || 'КОМАНДА 1'; }), 350));
+byId('awayName').addEventListener('input', debounce(e=>push(s=>{ s.away.name = e.target.value.trim() || 'КОМАНДА 2'; }), 350));
+byId('homeColor').addEventListener('input', debounce(e=>push(s=>{ s.home.color = e.target.value; }), 120));
+byId('awayColor').addEventListener('input', debounce(e=>push(s=>{ s.away.color = e.target.value; }), 120));
+
+byId('incH').addEventListener('click', ()=>push(s=>{ s.score.h++; }));
+byId('decH').addEventListener('click', ()=>push(s=>{ s.score.h = Math.max(0,s.score.h-1); }));
+byId('incA').addEventListener('click', ()=>push(s=>{ s.score.a++; }));
+byId('decA').addEventListener('click', ()=>push(s=>{ s.score.a = Math.max(0,s.score.a-1); }));
+
+cntRows.addEventListener('click', e=>{
+  const b = e.target.closest('button[data-d]');
+  if(!b) return;
+  const {k, s:side, d} = b.dataset;
+  push(st=>{ st.stats[k][side] = Math.max(0, st.stats[k][side] + (+d)); });
+});
+
+/* тап по числу — ручной ввод (цифровая клавиатура) */
+function attachEditor(el, applyFn){
+  el.addEventListener('click', ()=>{
+    if(el.dataset.editing) return;
+    const start = parseInt(el.textContent,10) || 0;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.inputMode = 'numeric'; inp.value = start; inp.className = 'inline-edit';
+    el.dataset.editing = '1'; el.textContent = ''; el.appendChild(inp);
+    inp.focus(); inp.select();
+    const commit = ()=>{
+      let v = parseInt(inp.value,10); if(isNaN(v) || v < 0) v = start;
+      delete el.dataset.editing;
+      push(s=>applyFn(s,v));
+    };
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', e=>{
+      if(e.key === 'Enter') inp.blur();
+      else if(e.key === 'Escape'){ inp.removeEventListener('blur',commit); delete el.dataset.editing; el.textContent = start; }
+    });
+  });
+}
+attachEditor(byId('sbHv'), (s,v)=>{ s.score.h = v; });
+attachEditor(byId('sbAv'), (s,v)=>{ s.score.a = v; });
+METRICS.forEach(m=>{
+  attachEditor(byId(`cnt-${m.k}-h`), (s,v)=>{ s.stats[m.k].h = v; });
+  attachEditor(byId(`cnt-${m.k}-a`), (s,v)=>{ s.stats[m.k].a = v; });
+});
+
+byId('autoScore').addEventListener('change', e=>push(s=>{ s.autoScore = e.target.checked; }));
+byId('showAll').addEventListener('click', ()=>push(s=>{ s.modules.score = true; METRICS.forEach(m=>s.modules[m.k]=true); }));
+byId('hideAll').addEventListener('click', ()=>push(s=>{ s.modules.score = false; METRICS.forEach(m=>s.modules[m.k]=false); }));
+byId('centerToggle').addEventListener('click', ()=>push(s=>{ s.center.on = !s.center.on; if(!s.center.on) s.center.focus = null; }));
+byId('resetStats').addEventListener('click', ()=>push(s=>{ METRICS.forEach(m=>{ s.stats[m.k].h=0; s.stats[m.k].a=0; }); }));
+byId('resetMatch').addEventListener('click', ()=>push(s=>{
+  s.score = {h:0,a:0};
+  METRICS.forEach(m=>{ s.stats[m.k]={h:0,a:0}; s.modules[m.k]=false; });
+  s.modules.score = false; s.center = {on:false, focus:null};
+}));
+
+/* горячие клавиши (актуальны для планшета с клавиатурой) */
+window.addEventListener('keydown', e=>{
+  if(e.target.matches('input,textarea,[contenteditable]')) return;
+  const c = e.code;
+  if(c.startsWith('Digit')){
+    const n = +c.slice(5);
+    if(n>=1 && n<=5){ const m = METRICS[n-1]; push(s=>{ s.modules[m.k] = !s.modules[m.k]; }); }
+  }
+  else if(c==='KeyQ') push(s=>{ s.modules.score = !s.modules.score; });
+  else if(c==='KeyA') push(s=>{ s.modules.score = true; METRICS.forEach(m=>s.modules[m.k]=true); });
+  else if(c==='KeyZ') push(s=>{ s.modules.score = false; METRICS.forEach(m=>s.modules[m.k]=false); });
+  else if(c==='KeyW') push(s=>{ s.center.on = !s.center.on; if(!s.center.on) s.center.focus = null; });
+  else if(c==='KeyF') push(s=>{ s.center.focus = null; });
+});
+
+/* ================= ССЫЛКА НА OVERLAY ================= */
+const overlayUrl = new URL('overlay.html', location.href).href;
+byId('overlayUrl').value = overlayUrl;
+byId('openBtn').addEventListener('click', ()=>window.open(overlayUrl, '_blank'));
+byId('copyBtn').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(overlayUrl); }
+  catch{ const i = byId('overlayUrl'); i.focus(); i.select(); document.execCommand('copy'); }
+  toast('Ссылка на web-overlay скопирована');
+});
+
+/* ================= ТОСТ И СТАТУС ================= */
+let toastT;
+function toast(msg){
+  const t = byId('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function setStatus(mode, text){
+  const el = byId('status'), tx = byId('statusText');
+  el.className = 'status ' + mode;
+  tx.textContent = text || ({wait:'ПОДКЛЮЧЕНИЕ…', ok:'ОБЛАКО', denied:'БАЗА ЗАКРЫТА', local:'ЛОКАЛЬНО'})[mode];
+}
+
+/* ================= FIREBASE ================= */
+async function ping(url){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), 3500);
+  try{
+    const r = await fetch(url + '/.json?shallow=true', {signal:ctrl.signal});
+    clearTimeout(t);
+    return r.status===200 || r.status===401 || r.status===403;
+  }catch{ clearTimeout(t); return false; }
+}
+(async()=>{
+  let url = null;
+  for(const c of URL_CANDIDATES){ if(await ping(c)){ url = c; break; } }
+  if(!url){ setStatus('local'); toast('Firebase недоступен — синхронизация в пределах этого браузера'); return; }
+  try{
+    const {initializeApp} = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    const {getDatabase, ref, onValue, set} = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+    const app = initializeApp({...FIREBASE_CONFIG, databaseURL:url});
+    const db = getDatabase(app);
+    try{ localStorage.setItem('k4tv_dburl', url); }catch{}
+    let boot = false, gotAny = false;
+    onValue(ref(db, PATH), snap=>{
+      gotAny = true;
+      const v = snap.val();
+      if(v == null){ if(!boot){ boot = true; if(fbSet) fbSet(state); } setStatus('ok'); }
+      else if(v.rev > state.rev){ state = normState(v); renderAll(); setStatus('ok'); }
+      else setStatus('ok');
+    }, err=>{
+      setStatus('denied');
+      toast('Нет доступа к базе — откройте правила чтения/записи (блок «Синхронизация»)');
+      console.warn('RTDB:', err && err.message);
+    });
+    fbSet = s => set(ref(db, PATH), s);
+    setTimeout(()=>{ if(!gotAny) setStatus('local'); }, 9000);
+  }catch(e){ setStatus('local'); console.warn(e); }
+})();
+
+byId('dbApply').addEventListener('click', ()=>{
+  const v = byId('dbUrlInput').value.trim();
+  if(v){ localStorage.setItem('k4tv_dburl', v); toast('URL сохранён — перезагрузка'); }
+  else { localStorage.removeItem('k4tv_dburl'); toast('Автоподбор URL — перезагрузка'); }
+  setTimeout(()=>location.reload(), 600);
+});
+
+renderAll();
+</script>
+</body>
+</html>
