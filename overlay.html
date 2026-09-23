@@ -9,6 +9,7 @@
 <style>
 :root{
   --panel:rgba(12,15,21,.94);
+  --center-bg:rgba(12,15,21,.8);   /* фон сводной панели: 80% непрозрачности */
   --deep:#05070b;
   --text:#f2f4f8;
   --amber:#ffb62e;
@@ -36,7 +37,8 @@ body{font-family:'Oswald','Arial Narrow',Arial,sans-serif;color:var(--text);-web
 
 /* --- модуль табло: названия команд + счёт --- */
 .team{display:flex;align-items:center;gap:10px;min-width:0;height:100%}
-.cbar{flex:none;width:7px;height:100%;background:var(--home)}
+.cbar{flex:none;width:7px;height:100%}
+.team.h .cbar{background:var(--home)}
 .team.a .cbar{background:var(--away);order:2}
 .tname{font-weight:600;font-size:21px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:225px}
 .scorebox{flex:none;display:flex;align-items:center;gap:7px;height:100%;background:var(--deep);padding:0 16px;margin:0 12px}
@@ -52,36 +54,40 @@ body{font-family:'Oswald','Arial Narrow',Arial,sans-serif;color:var(--text);-web
 .num.a{border-bottom-color:var(--away)}
 .mdash{color:#57616f;font-weight:600;font-size:16px}
 
-/* ============ СВОДНАЯ ПАНЕЛЬ (центр экрана) ============ */
+/* ============ СВОДНАЯ ПАНЕЛЬ (центр экрана, компактная) ============ */
 #center{
-  position:fixed;left:50%;top:50%;width:min(840px,88vw);
-  background:var(--panel);border:1px solid #333d4d;border-top:3px solid var(--amber);
-  clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,0 100%);
-  padding:26px 34px 20px;
+  position:fixed;left:50%;top:50%;
+  width:min(700px,86vw);
+  background:var(--center-bg);
+  border:1px solid #333d4d;border-top:3px solid var(--amber);
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%);
+  padding:18px 26px 14px;
   opacity:0;transform:translate(-50%,-46%) scale(.97);pointer-events:none;
   transition:opacity .45s ease,transform .5s var(--ease);
 }
 #center.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 
-.c-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.c-head .kick{font-size:11px;font-weight:600;letter-spacing:.38em;color:var(--amber);margin-bottom:5px}
-.c-head h2{margin:0;font-family:'Russo One';font-weight:400;font-size:25px;letter-spacing:.04em}
-.c-stamp{flex:none;background:var(--amber);color:#1a1206;font-family:'Russo One';font-size:14px;padding:5px 11px 4px;clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px))}
+.c-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.c-head .kick{font-size:12px;font-weight:600;letter-spacing:.38em;color:var(--amber);margin-bottom:4px}
+.c-head h2{margin:0;font-family:'Russo One';font-weight:400;font-size:27px;letter-spacing:.04em}
+.c-stamp{flex:none;background:var(--amber);color:#1a1206;font-family:'Russo One';font-size:16px;padding:4px 10px 3px;clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px))}
 
-.c-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;padding:0 0 14px;border-bottom:1px solid #232b38}
-.ct{display:flex;align-items:center;gap:12px;min-width:0}
-.ct .cbar{width:6px;height:36px}
-.ct .n{font-weight:600;font-size:19px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:0 0 10px;border-bottom:1px solid #232b38}
+.ct{display:flex;align-items:center;gap:10px;min-width:0}
+.ct .cbar{width:6px;height:32px}
+.ct.h .cbar{background:var(--home)}
+.ct.a .cbar{background:var(--away)}
+.ct .n{font-weight:600;font-size:21px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ct.a{justify-content:flex-end}
 .ct.a .n{text-align:right}
-.c-score{flex:none;display:flex;align-items:center;gap:8px;background:var(--deep);padding:4px 18px}
-.c-score b{font-family:'Russo One';font-weight:400;font-size:33px;min-width:36px;text-align:center}
-.c-score i{font-style:normal;color:var(--amber);font-family:'Russo One';font-size:26px}
+.c-score{flex:none;display:flex;align-items:center;gap:8px;background:var(--deep);padding:3px 16px}
+.c-score b{font-family:'Russo One';font-weight:400;font-size:36px;min-width:38px;text-align:center}
+.c-score i{font-style:normal;color:var(--amber);font-family:'Russo One';font-size:29px}
 
-.c-rows{list-style:none;margin:4px 0 0;padding:0}
+.c-rows{list-style:none;margin:2px 0 0;padding:0}
 .c-rows li{
-  display:grid;grid-template-columns:1fr 260px 1fr;gap:16px;align-items:center;
-  padding:13px 12px;border-bottom:1px solid #1d2430;
+  display:grid;grid-template-columns:1fr 240px 1fr;gap:12px;align-items:center;
+  padding:10px 8px;border-bottom:1px solid #1d2430;
   border-left:3px solid transparent;border-right:3px solid transparent;
   opacity:0;transform:translateY(14px);
   transition:opacity .45s ease,transform .5s var(--ease),background-color .25s ease,border-color .25s ease;
@@ -98,16 +104,17 @@ body{font-family:'Oswald','Arial Narrow',Arial,sans-serif;color:var(--text);-web
 .cr{display:flex;align-items:center;gap:12px;min-width:0}
 .cr.h{grid-column:1;justify-content:flex-start}
 .cr.a{grid-column:3;justify-content:flex-end}
-.cr-num{flex:none;width:46px;font-family:'Russo One';font-weight:400;font-size:21px}
+.cr-num{flex:none;width:48px;font-family:'Russo One';font-weight:400;font-size:23px}
 .cr.h .cr-num{text-align:left}
 .cr.a .cr-num{text-align:right}
-.cr-bar{flex:1 1 auto;height:7px;background:#1a212c;position:relative;overflow:hidden}
+/* бар без фонового трека: видна только цветная заливка (при 0 — пусто) */
+.cr-bar{flex:1 1 auto;height:7px;position:relative;overflow:hidden}
 .cr-bar i{position:absolute;top:0;bottom:0;width:0;transition:width .8s var(--ease)}
 .cr.h .cr-bar i{right:0;background:var(--home)}
 .cr.a .cr-bar i{left:0;background:var(--away)}
 .cr-label{grid-column:2;display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
-.cr-label svg{flex:none;width:18px;height:18px;color:var(--amber)}
-.cr-label span{font-weight:600;font-size:13.5px;letter-spacing:.14em;color:#c3cbd7;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-label svg{flex:none;width:20px;height:20px;color:var(--amber)}
+.cr-label span{font-weight:600;font-size:15px;letter-spacing:.12em;color:#c3cbd7;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .c-rows li.focus .cr-label span{color:var(--amber)}
 </style>
 </head>
@@ -161,6 +168,7 @@ const URL_CANDIDATES = [...new Set([
 const METRICS = [
   {k:'shots',   label:'УДАРЫ ПО ВОРОТАМ'},
   {k:'combo',   label:'СЕРИИ ИЗ 3-Х ПЕРЕДАЧ'},
+  {k:'tackles', label:'ОТБОРЫ'},
   {k:'tackles', label:'ОТБОРЫ'},
   {k:'fouls',   label:'НАРУШЕНИЯ'},
   {k:'ycards',  label:'ЖЁЛТЫЕ КАРТОЧКИ'}
@@ -289,7 +297,7 @@ async function ping(url){                       /* проверка, сущес�
 (async()=>{
   let url = null;
   for(const c of URL_CANDIDATES){ if(await ping(c)){ url = c; break; } }
-  if(!url){ console.warn('[K4ТВ] база не найдена — работаю на локальном канале'); return; }
+  if(!url){ console.warn('[К4ТВ] база не найдена — работаю на локальном канале'); return; }
   try{
     const {initializeApp} = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
     const {getDatabase, ref, onValue} = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
