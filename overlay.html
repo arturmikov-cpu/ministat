@@ -87,7 +87,7 @@ body{font-family:'Oswald','Arial Narrow',Arial,sans-serif;color:var(--text);-web
 .c-rows{list-style:none;margin:2px 0 0;padding:0}
 .c-rows li{
   display:grid;grid-template-columns:1fr 240px 1fr;gap:12px;align-items:center;
-  padding:10px 8px;border-bottom:1px solid #1d2430;
+  padding:9px 8px;border-bottom:1px solid #1d2430;
   border-left:3px solid transparent;border-right:3px solid transparent;
   opacity:0;transform:translateY(14px);
   transition:opacity .45s ease,transform .5s var(--ease),background-color .25s ease,border-color .25s ease;
@@ -95,16 +95,19 @@ body{font-family:'Oswald','Arial Narrow',Arial,sans-serif;color:var(--text);-web
 .c-rows li:last-child{border-bottom:none}
 #center.show .c-rows li{opacity:1;transform:none}
 #center.show .c-rows li:nth-child(1){transition-delay:.15s}
-#center.show .c-rows li:nth-child(2){transition-delay:.22s}
-#center.show .c-rows li:nth-child(3){transition-delay:.29s}
-#center.show .c-rows li:nth-child(4){transition-delay:.36s}
-#center.show .c-rows li:nth-child(5){transition-delay:.43s}
+#center.show .c-rows li:nth-child(2){transition-delay:.21s}
+#center.show .c-rows li:nth-child(3){transition-delay:.27s}
+#center.show .c-rows li:nth-child(4){transition-delay:.33s}
+#center.show .c-rows li:nth-child(5){transition-delay:.39s}
+#center.show .c-rows li:nth-child(6){transition-delay:.45s}
+#center.show .c-rows li:nth-child(7){transition-delay:.51s}
+#center.show .c-rows li:nth-child(8){transition-delay:.57s}
 .c-rows li.focus{background:rgba(255,182,46,.09);border-left-color:var(--amber);border-right-color:var(--amber)}
 
 .cr{display:flex;align-items:center;gap:12px;min-width:0}
 .cr.h{grid-column:1;justify-content:flex-start}
 .cr.a{grid-column:3;justify-content:flex-end}
-.cr-num{flex:none;width:48px;font-family:'Russo One';font-weight:400;font-size:23px}
+.cr-num{flex:none;min-width:54px;font-family:'Russo One';font-weight:400;font-size:23px}
 .cr.h .cr-num{text-align:left}
 .cr.a .cr-num{text-align:right}
 /* бар без фонового трека: видна только цветная заливка (при 0 — пусто) */
@@ -165,16 +168,22 @@ const URL_CANDIDATES = [...new Set([
   'https://mini-foot-stat-default-rtdb.europe-west1.firebasedatabase.app'
 ].filter(Boolean))];
 
+/* computed:true — метрика без ручного ввода (точность = точные / (точные + неточные)) */
 const METRICS = [
   {k:'shots',   label:'УДАРЫ ПО ВОРОТАМ'},
+  {k:'passes',  label:'ТОЧНЫЕ ПЕРЕДАЧИ'},
+  {k:'mispass', label:'НЕТОЧНЫЕ ПЕРЕДАЧИ'},
+  {k:'accuracy',label:'ТОЧНОСТЬ ПЕРЕДАЧ', computed:true},
   {k:'combo',   label:'СЕРИИ ИЗ 3-Х ПЕРЕДАЧ'},
-  {k:'tackles', label:'ОТБОРЫ'},
   {k:'tackles', label:'ОТБОРЫ'},
   {k:'fouls',   label:'НАРУШЕНИЯ'},
   {k:'ycards',  label:'ЖЁЛТЫЕ КАРТОЧКИ'}
 ];
 const ICONS = {
   shots:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.9l4.1 3-1.6 4.7h-5l-1.6-4.7z"/></svg>',
+  passes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M8.2 12.6l2.7 2.7 5-5.6"/></svg>',
+  mispass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M9.2 9.2l5.6 5.6M14.8 9.2l-5.6 5.6"/></svg>',
+  accuracy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.7"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>',
   combo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="4.6" cy="17.2" r="1.8"/><circle cx="12" cy="7.4" r="1.8"/><circle cx="19.4" cy="17.2" r="1.8"/><path d="M6.1 15.6l4.7-6.4M13.2 9.2l4.7 6.4"/></svg>',
   tackles:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.1l6.9 2.9v5.1c0 4.6-3 7.7-6.9 9.8-3.9-2.1-6.9-5.2-6.9-9.8V6z"/></svg>',
   fouls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.4" cy="14.6" r="5.3"/><path d="M13.3 10.8l7.2-4.4v4.2l-4.2 2.4"/><circle cx="9.4" cy="14.6" r="1.2"/></svg>',
@@ -186,12 +195,18 @@ const DEFAULT_STATE = {
   home:{name:'КОМАНДА 1',color:'#ff5148'},
   away:{name:'КОМАНДА 2',color:'#45c4ff'},
   score:{h:0,a:0},
-  stats:{shots:{h:0,a:0},combo:{h:0,a:0},tackles:{h:0,a:0},fouls:{h:0,a:0},ycards:{h:0,a:0}},
-  modules:{score:false,shots:false,combo:false,tackles:false,fouls:false,ycards:false},
+  stats:{
+    shots:{h:0,a:0}, passes:{h:0,a:0}, mispass:{h:0,a:0},
+    combo:{h:0,a:0}, tackles:{h:0,a:0}, fouls:{h:0,a:0}, ycards:{h:0,a:0}
+  },
+  modules:{score:false,shots:false,passes:false,mispass:false,accuracy:false,combo:false,tackles:false,fouls:false,ycards:false},
   autoScore:true,
   center:{on:false,focus:null}
 };
 const clone = o => JSON.parse(JSON.stringify(o));
+/* точность передач, %: точные / (точные + неточные) */
+const pct = (ok,bad)=>{ const t = ok+bad; return t>0 ? Math.round(ok/t*100) : 0; };
+
 function normState(raw){
   const s = clone(DEFAULT_STATE);
   if(!raw || typeof raw!=='object') return s;
@@ -243,8 +258,13 @@ function render(st){
   byId('s-a').textContent = st.score.a;
   METRICS.forEach(m=>{
     byId('m-'+m.k).classList.toggle('on', !!st.modules[m.k]);
-    byId('v-'+m.k+'-h').textContent = st.stats[m.k].h;
-    byId('v-'+m.k+'-a').textContent = st.stats[m.k].a;
+    if(m.computed){
+      byId('v-'+m.k+'-h').textContent = pct(st.stats.passes.h, st.stats.mispass.h) + '%';
+      byId('v-'+m.k+'-a').textContent = pct(st.stats.passes.a, st.stats.mispass.a) + '%';
+    }else{
+      byId('v-'+m.k+'-h').textContent = st.stats[m.k].h;
+      byId('v-'+m.k+'-a').textContent = st.stats[m.k].a;
+    }
   });
 
   /* сводная панель */
@@ -254,12 +274,21 @@ function render(st){
   byId('c-s-h').textContent = st.score.h;
   byId('c-s-a').textContent = st.score.a;
   METRICS.forEach(m=>{
-    const h = st.stats[m.k].h, a = st.stats[m.k].a;
-    const max = Math.max(h,a);
-    byId('cv-'+m.k+'-h').textContent = h;
-    byId('cv-'+m.k+'-a').textContent = a;
-    byId('cb-'+m.k+'-h').style.width = (max>0 ? h/max*100 : 0) + '%';
-    byId('cb-'+m.k+'-a').style.width = (max>0 ? a/max*100 : 0) + '%';
+    let h, a;
+    if(m.computed){
+      /* точность: числа и бары в процентах 0–100 напрямую */
+      h = pct(st.stats.passes.h, st.stats.mispass.h);
+      a = pct(st.stats.passes.a, st.stats.mispass.a);
+      byId('cb-'+m.k+'-h').style.width = h + '%';
+      byId('cb-'+m.k+'-a').style.width = a + '%';
+    }else{
+      h = st.stats[m.k].h; a = st.stats[m.k].a;
+      const max = Math.max(h,a);
+      byId('cb-'+m.k+'-h').style.width = (max>0 ? h/max*100 : 0) + '%';
+      byId('cb-'+m.k+'-a').style.width = (max>0 ? a/max*100 : 0) + '%';
+    }
+    byId('cv-'+m.k+'-h').textContent = m.computed ? (h + '%') : h;
+    byId('cv-'+m.k+'-a').textContent = m.computed ? (a + '%') : a;
     const li = crows.querySelector(`li[data-k="${m.k}"]`);
     li.classList.toggle('focus', st.center.focus === m.k);
   });
