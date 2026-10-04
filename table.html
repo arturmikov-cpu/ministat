@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Турнирная таблица — Чемпионат края дивизион "1" (2026)</title>
+<style>
+  /* ===== Black & Gold Overlay ===== */
+  :root {
+    --bg-deep:        #0a0a0c;
+    --bg-panel:       #141318;
+    --bg-row:         #1a1922;
+    --bg-row-hover:   #221f2a;
+    --gold:           #d4af37;
+    --gold-bright:    #f5d97a;
+    --gold-dim:       #8a7322;
+    --gold-glow:      rgba(212, 175, 55, 0.45);
+    --text-main:      #f4f1e8;
+    --text-muted:     #8a8579;
+    --border-gold:    rgba(212, 175, 55, 0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: transparent;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+    overflow: hidden;
+  }
+
+  body {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+  }
+
+  .overlay-panel {
+    width: 1180px;
+    background:
+      linear-gradient(180deg, rgba(20,19,24,0.95) 0%, rgba(10,10,12,0.95) 100%);
+    border: 2px solid var(--border-gold);
+    border-radius: 22px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.6) inset,
+      0 0 30px rgba(0,0,0,0.6),
+      0 0 60px rgba(212, 175, 55, 0.08);
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* top gold accent line */
+  .overlay-panel::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--gold-dim) 15%,
+      var(--gold-bright) 50%,
+      var(--gold-dim) 85%,
+      transparent 100%);
+    box-shadow: 0 0 18px var(--gold-glow);
+  }
+
+  /* Header */
+  .header {
+    padding: 30px 40px 22px;
+    background:
+      linear-gradient(180deg, rgba(212, 175, 55, 0.10) 0%, rgba(212, 175, 55, 0) 100%);
+    border-bottom: 2px solid var(--border-gold);
+    position: relative;
+  }
+
+  .header-eyebrow {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--gold-bright);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-eyebrow::before {
+    content: "";
+    width: 28px;
+    height: 2px;
+    background: var(--gold-bright);
+    display: inline-block;
+  }
+
+  .header-title {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-main);
+    line-height: 1.2;
+  }
+
+  .header-title span {
+    color: var(--gold-bright);
+  }
+
+  .header-subtitle {
+    margin-top: 8px;
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.8px;
+  }
+
+  .header-link {
+    position: absolute;
+    top: 32px;
+    right: 40px;
+    font-size: 16px;
+    color: var(--gold-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .header-link:hover { color: var(--gold-bright); }
+
+  /* Table */
+  .standings {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 22px;
+  }
+
+  .standings thead th {
+    padding: 18px 10px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gold-bright);
+    text-transform: uppercase;
+    background: rgba(212, 175, 55, 0.08);
+    border-bottom: 2px solid var(--border-gold);
+    text-align: center;
+  }
+  .standings thead th:first-child { text-align: left; padding-left: 32px; }
+  .standings thead th:last-child  { text-align: center; padding-right: 28px; }
+
+  .standings tbody tr {
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    transition: background 0.18s ease;
+  }
+  .standings tbody tr:last-child { border-bottom: none; }
+  .standings tbody tr:hover { background: var(--bg-row-hover); }
+
+  .standings tbody td {
+    padding: 16px 10px;
+    text-align: center;
+    color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  /* Position cell */
+  .pos-cell {
+    width: 64px;
+    padding-left: 32px !important;
+    text-align: left !important;
+  }
+  .pos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+    background: var(--bg-row);
+    border: 2px solid rgba(212, 175, 55, 0.25);
+  }
+  /* Top 3 gold accent */
+  tr.podium-1 .pos-badge {
+    background: linear-gradient(135deg, #f5d97a 0%, #d4af37 50%, #8a7322 100%);
+    color: #1a1408;
+    border: 1px solid #f5d97a;
+    box-shadow: 0 0 10px var(--gold-glow);
+  }
+  tr.podium-2 .pos-badge {
+    background: linear-gradient(135deg, #c9c2a8 0%, #9a9484 50%, #6a655a 100%);
+    color: #1a1408;
+    border: 1px solid #c9c2a8;
+  }
+  tr.podium-3 .pos-badge {
+    background: linear-gradient(135deg, #c8924a 0%, #9a6a32 50%, #5a3e1c 100%);
+    color: #1a1408;
+    border: 1px solid #c8924a;
+  }
+
+  /* Team cell */
+  .team-cell {
+    text-align: left !important;
+    padding-left: 16px !important;
+    min-width: 380px;
+  }
+  .team-wrap {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .team-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(212, 175, 55, 0.2);
+    padding: 2px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .team-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .team-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: 0.3px;
+  }
+  .team-city {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Goals (М) */
+  .goals-cell {
+    font-size: 20px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  /* Points (О) */
+  .points-cell {
+    padding-right: 28px !important;
+  }
+  .points-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--gold-bright);
+    background: rgba(212, 175, 55, 0.12);
+    border: 2px solid var(--border-gold);
+  }
+  tr.podium-1 .points-badge {
+    background: rgba(245, 217, 122, 0.18);
+    color: var(--gold-bright);
+    box-shadow: 0 0 8px rgba(245, 217, 122, 0.25);
+  }
+
+  /* Footer */
+  .footer {
+    padding: 18px 32px;
+    border-top: 2px solid var(--border-gold);
+    background: rgba(0,0,0,0.5);
+    font-size: 16px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-source { color: var(--gold-dim); font-weight: 700; font-size: 16px; }
+  .footer-legend { display: flex; gap: 24px; }
+  .footer-legend span b { color: var(--gold-bright); font-weight: 800; margin-right: 6px; font-size: 18px; }
+
+  /* Animation on entry */
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .overlay-panel { animation: slideInRight 0.5s ease-out; }
+
+  @keyframes rowFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .standings tbody tr {
+    opacity: 0;
+    animation: rowFadeIn 0.35s ease-out forwards;
+  }
+  .standings tbody tr:nth-child(1) { animation-delay: 0.10s; }
+  .standings tbody tr:nth-child(2) { animation-delay: 0.15s; }
+  .standings tbody tr:nth-child(3) { animation-delay: 0.20s; }
+  .standings tbody tr:nth-child(4) { animation-delay: 0.25s; }
+  .standings tbody tr:nth-child(5) { animation-delay: 0.30s; }
+  .standings tbody tr:nth-child(6) { animation-delay: 0.35s; }
+  .standings tbody tr:nth-child(7) { animation-delay: 0.40s; }
+  .standings tbody tr:nth-child(8) { animation-delay: 0.45s; }
+  .standings tbody tr:nth-child(9) { animation-delay: 0.50s; }
+  .standings tbody tr:nth-child(10){ animation-delay: 0.55s; }
+
+  /* live pulse dot */
+  .live-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    display: inline-block;
+    animation: livePulse 1.6s ease-in-out infinite;
+    box-shadow: 0 0 10px var(--gold-glow);
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="overlay-panel" role="table" aria-label="Турнирная таблица">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-eyebrow">
+        <span class="live-dot"></span>
+        Football · Пермский край
+      </div>
+      <div class="header-title">
+        Чемпионат края · дивизион <span>"1"</span> (2026)
+      </div>
+      <div class="header-subtitle">Турнирная таблица · Сезон 2026</div>
+      <a class="header-link" href="https://www.ffpk.org/tournament45169" target="_blank" rel="noopener">
+        ffpk.org ↗
+      </a>
+    </div>
+
+    <!-- Standings -->
+    <table class="standings">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Команда</th>
+          <th>И</th>
+          <th>В</th>
+          <th>Н</th>
+          <th>П</th>
+          <th>М</th>
+          <th>О</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="podium-1">
+          <td class="pos-cell"><span class="pos-badge">1</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/iaboxHf5.png" alt="Краснокамск KTG" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Краснокамск KTG</span>
+                <span class="team-city">Краснокамск</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>16</td><td>1</td><td>0</td>
+          <td class="goals-cell">89:10</td>
+          <td class="points-cell"><span class="points-badge">49</span></td>
+        </tr>
+
+        <tr class="podium-2">
+          <td class="pos-cell"><span class="pos-badge">2</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/azEz6bN9.png" alt="Метафракс" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Метафракс</span>
+                <span class="team-city">Губаха</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>12</td><td>2</td><td>3</td>
+          <td class="goals-cell">57:22</td>
+          <td class="points-cell"><span class="points-badge">38</span></td>
+        </tr>
+
+        <tr class="podium-3">
+          <td class="pos-cell"><span class="pos-badge">3</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/qbpDojYt.png" alt="Кунгур" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Кунгур</span>
+                <span class="team-city">Кунгур</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>12</td><td>1</td><td>4</td>
+          <td class="goals-cell">50:27</td>
+          <td class="points-cell"><span class="points-badge">37</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">4</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/SBfW2bZU.png" alt="СШОР Звезда" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">СШОР Звезда</span>
+                <span class="team-city">Пермь</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>11</td><td>1</td><td>5</td>
+          <td class="goals-cell">43:20</td>
+          <td class="points-cell"><span class="points-badge">34</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">5</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/s3BtPKq8.png" alt="Академия" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Академия</span>
+                <span class="team-city">Пермь</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>8</td><td>2</td><td>7</td>
+          <td class="goals-cell">35:28</td>
+          <td class="points-cell"><span class="points-badge">26</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">6</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/tM6Ju2Fs.png" alt="СШ Закамск" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">СШ Закамск</span>
+                <span class="team-city">Пермь</span>
+              </div>
+            </div>
+          </td>
+          <td>18</td><td>4</td><td>6</td><td>8</td>
+          <td class="goals-cell">25:39</td>
+          <td class="points-cell"><span class="points-badge">18</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">7</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/gm9uLv4B.png" alt="Уралкалий" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Уралкалий</span>
+                <span class="team-city">Березники</span>
+              </div>
+            </div>
+          </td>
+          <td>17</td><td>5</td><td>2</td><td>10</td>
+          <td class="goals-cell">22:34</td>
+          <td class="points-cell"><span class="points-badge">17</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">8</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/0V6HDFIg.png" alt="Нефтяник" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Нефтяник</span>
+                <span class="team-city">Чернушка</span>
+              </div>
+            </div>
+          </td>
+          <td>18</td><td>4</td><td>2</td><td>12</td>
+          <td class="goals-cell">22:69</td>
+          <td class="points-cell"><span class="points-badge">14</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">9</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/oHgADmC1.png" alt="Лысьва" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Лысьва</span>
+                <span class="team-city">Лысьва</span>
+              </div>
+            </div>
+          </td>
+          <td>18</td><td>3</td><td>1</td><td>14</td>
+          <td class="goals-cell">18:63</td>
+          <td class="points-cell"><span class="points-badge">10</span></td>
+        </tr>
+
+        <tr>
+          <td class="pos-cell"><span class="pos-badge">10</span></td>
+          <td class="team-cell">
+            <div class="team-wrap">
+              <img class="team-logo" src="https://img.nagradion.ru/images/bf24x24/shields/sZ1Xwviy.png" alt="Лидер" onerror="this.style.visibility='hidden'">
+              <div class="team-info">
+                <span class="team-name">Лидер</span>
+                <span class="team-city">Суксун</span>
+              </div>
+            </div>
+          </td>
+          <td>18</td><td>3</td><td>0</td><td>15</td>
+          <td class="goals-cell">11:60</td>
+          <td class="points-cell"><span class="points-badge">9</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-source">SOURCE: FFPK.ORG</div>
+      <div class="footer-legend">
+        <span><b>И</b>Игры</span>
+        <span><b>В</b>Победы</span>
+        <span><b>Н</b>Ничьи</span>
+        <span><b>П</b>Пораж.</span>
+        <span><b>М</b>Мячи</span>
+        <span><b>О</b>Очки</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
