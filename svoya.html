@@ -218,8 +218,8 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:Ari
 @keyframes activePulse{from{transform:scale(1)}to{transform:scale(1.03)}}
 .pbox.winblink{animation:winBlink .4s steps(1,end) 3}
 @keyframes winBlink{0%{opacity:1}50%{opacity:.15}}
-.pbox.winbig{transform:scale(2.05);z-index:55;border-color:var(--gold);
-  box-shadow:0 0 90px rgba(255,215,94,.65)}
+.pbox.winbig{transform:scale(1.5);z-index:55;border-color:var(--gold);
+  box-shadow:0 0 70px rgba(255,215,94,.65)}
 .playersDim .pbox{opacity:.22}
 .playersDim .pbox.winbig{opacity:1}
 
@@ -449,7 +449,8 @@ function connect(){
 let renderQueued = false;
 function scheduleRender(){
   if (renderQueued) return; renderQueued = true;
-  requestAnimationFrame(()=>{ renderQueued = false; render(); });
+  // setTimeout вместо requestAnimationFrame: кадры не останавливаются в скрытом окне/вкладке
+  setTimeout(()=>{ renderQueued = false; render(); }, 40);
 }
 /* ===================== отрисовка ===================== */
 const $ = id => document.getElementById(id);
@@ -467,7 +468,7 @@ function buildBoardKey(){
   let k = "R" + l.round + "|";
   for (const p of themesOf(rd)){
     k += (p.v.title||"") + "~";
-    for (const c of cellsOf(p.v)) k += (c.used?"u":"n") + (c.price|0) + ";";
+    for (const cp of cellsOf(p.v)){ const c = cp.v; k += (c.used?"u":"n") + (c.price|0) + (c.cat?"K":"") + ";"; }
     k += "!";
   }
   return k;
@@ -487,9 +488,8 @@ function renderBoard(){
   let maxCells = 1;
   const list = [];
   for (const p of themes){ const cs = cellsOf(p.v); maxCells = Math.max(maxCells, cs.length); list.push({p, cs}); }
-  b.style.gridTemplateColumns = "repeat(" + n + ",1fr)";
-  b.style.gridTemplateRows = "auto repeat(" + maxCells + ",1fr)";
-  b.style.gridAutoFlow = "column";
+  b.style.gridTemplateRows = "repeat(" + n + ",1fr)";
+  b.style.gridTemplateColumns = "24% repeat(" + maxCells + ",1fr)";
   // размер шрифта цен и тем
   const cfs = maxCells >= 7 ? 30 : maxCells >= 6 ? 36 : maxCells >= 5 ? 44 : 50;
   const tfs = n >= 6 ? 30 : n >= 5 ? 34 : 38;
@@ -598,6 +598,12 @@ function hideCards(instant){
     else if (!el.classList.contains("hidden")){ el.classList.add("out"); pt(()=>el.classList.add("hidden"), 960); }
   }
   if (instant){ $("modalWrap").classList.remove("on"); shownCardKey = ""; }
+  else if (!$("cardQ").classList.contains("hidden") || !$("cardA").classList.contains("hidden")){
+    // после полного исчезновения карточек снимаем затемняющую подложку — поле снова видно
+    pt(()=>$("modalWrap").classList.remove("on"), 980);
+  } else {
+    $("modalWrap").classList.remove("on");
+  }
 }
 function invalidateTimersOf(el){ el.classList.remove("in","out"); }
 
@@ -744,12 +750,15 @@ function winnerMachine(){
   box.classList.add("winblink");
   winnerTimers.push(setTimeout(()=>{ box.classList.remove("winblink"); box.classList.add("winbig"); $("playersRow").classList.add("playersDim"); }, 1250));
   winnerTimers.push(setTimeout(()=>{
+    // надпись ПОБЕДИТЕЛЬ по центру: панель игроков возвращается в статичное состояние
+    box.classList.remove("winbig");
+    $("playersRow").classList.remove("playersDim");
     const p = state.players[w];
     $("wName").textContent = p.name || "ИГРОК " + w[1];
     $("wScore").textContent = "итог: " + p.score;
     $("winnerScreen").classList.add("on");
     startConfetti();
-  }, 2050));
+  }, 2100));
 }
 /* ===================== конфетти ===================== */
 const confCanvas = $("confetti");
