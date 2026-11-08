@@ -610,12 +610,13 @@ function clearPhaseTimers(){ phaseTimers.forEach(clearTimeout); phaseTimers = []
 
 function hideCards(instant){
   clearPhaseTimers();
+  shownCardKey = ""; // маркер «карточка показана» гаснет вместе с карточками — иначе повторный показ этой же ячейки (после отмены) отсечётся
   for (const el of [$("cardQ"), $("cardA")]){
     el.classList.remove("in","out");
     if (instant) el.classList.add("hidden");
     else if (!el.classList.contains("hidden")){ el.classList.add("out"); pt(()=>el.classList.add("hidden"), 960); }
   }
-  if (instant){ $("modalWrap").classList.remove("on"); shownCardKey = ""; }
+  if (instant) $("modalWrap").classList.remove("on");
   else if (!$("cardQ").classList.contains("hidden") || !$("cardA").classList.contains("hidden")){
     // после полного исчезновения карточек снимаем затемняющую подложку — поле снова видно
     pt(()=>$("modalWrap").classList.remove("on"), 980);
@@ -675,13 +676,13 @@ function showCatIntro(waiting){
 function hideCatIntro(){ $("catIntro").classList.remove("on"); }
 
 /* --- звук: всегда включён; автозапуск мелодий; разблокировка по первому касанию/клавише --- */
-const audioRoles = {};           // роль -> {el, url}
-const blockedAudios = new Set(); // затребованное браузером по autoplay-политике
+const audioRoles = {};           // роль -> {el, url, want:true — должна звучать сейчас}
+const blockedAudios = new Set(); // звук, который браузер отложил по autoplay-политике
 function getRoleAudio(role, u){
   let r = audioRoles[role];
   if (!r || r.url !== u){
-    if (r){ try{ r.el.pause(); }catch(e){} }
-    r = audioRoles[role] = {el: new Audio(u), url: u};
+    if (r){ try{ r.el.pause(); }catch(e){} blockedAudios.delete(r.el); }
+    r = audioRoles[role] = {el: new Audio(u), url: u, want:false};
   }
   return r.el;
 }
@@ -689,6 +690,8 @@ function playRole(role, u, loop){
   if (!u) return;
   let el;
   try{ el = getRoleAudio(role, u); }catch(e){ return; }
+  const r = audioRoles[role];
+  r.want = true;
   el.loop = !!loop;
   try{ el.currentTime = 0; }catch(e){}
   const p = el.play();
@@ -699,15 +702,28 @@ function playRole(role, u, loop){
       $("soundBtn").classList.add("show");
     });
 }
-function stopRole(role){
+/* stop: pause + забыть элемент, чтобы жест пользователя не «воскресил» остановленную мелодию */
+function stopRole(role, drop){
   const r = audioRoles[role];
-  if (r){ try{ r.el.pause(); }catch(e){} }
+  if (!r) return;
+  r.want = false;
+  try{ r.el.pause(); }catch(e){}
+  if (drop){
+    blockedAudios.delete(r.el);
+    delete audioRoles[role];
+    if (!blockedAudios.size) $("soundBtn").classList.remove("show");
+  }
 }
-function stopAllSound(){ stopRole("jingle"); stopRole("intro"); stopRole("closing"); }
+function stopAllSound(){ stopRole("jingle", true); stopRole("intro", true); stopRole("closing", true); }
 function unlockAudios(){
-  for (const el of Array.from(blockedAudios)){ try{ el.play().catch(()=>{}); }catch(e){} }
-  blockedAudios.clear();
-  $("soundBtn").classList.remove("show");
+  // жест пользователя: запускаем только мелодии, которые должны звучать прямо сейчас
+  let any = false;
+  for (const role of Object.keys(audioRoles)){
+    const r = audioRoles[role];
+    if (!r.want || !blockedAudios.has(r.el)) continue;
+    try{ r.el.play().catch(()=>{}); any = true; }catch(e){}
+  }
+  if (any){ blockedAudios.clear(); $("soundBtn").classList.remove("show"); }
 }
 addEventListener("pointerdown", unlockAudios, true);
 addEventListener("keydown", unlockAudios, true);
@@ -740,14 +756,15 @@ function phaseMachine(){
     if (shownCardKey === key) return; // карточка уже показана (дубль записи)
     reapplySelectClass();
     const data = cell ? (cell.q || {}) : {};
-    hideCatIntro(); stopRole("jingle");
+    // вопрос показан — джингл больше не звучит и не может быть запущен заново жестом
+    hideCatIntro(); stopRole("jingle", true);
     fillCard($("cardQ"), data, "ВОПРОС");
     $("cardA").classList.add("hidden");
     showCard($("cardQ"), key);
     return;
   }
   if (live.phase === "answer"){
-    hideCatIntro(); stopRole("jingle");
+    hideCatIntro(); stopRole("jingle", true);
     const data = cell ? (cell.a || {}) : {};
     if (shownCardKey && shownCardKey.indexOf(live.phase+"|") !== 0){
       // плавная смена: вопрос гаснет (0.95с), затем ответ появляется (1с)
