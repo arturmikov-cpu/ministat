@@ -253,11 +253,20 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:Ari
 }
 #conn.err{color:#ff6b6b;font-weight:bold}
 
-/* ===== Сгенерировано: панель, карточки… ===== */
+/* ===== FX-канвас: фон из снега/конфетти (ниже плашки СВОЯ ИГРА, выше поля) ===== */
+#fx{position:absolute;inset:0;z-index:28;pointer-events:none}
+/* ===== Кот: подсказка пока ведущий не открыл вопрос ===== */
+#catIntro .waitHint{
+  display:none;margin-top:16px;color:#9fb0d8;font-size:26px;letter-spacing:3px;text-align:center;
+  text-shadow:0 2px 8px rgba(0,0,0,.7);
+}
+#catIntro.waiting .waitHint{display:block;animation:fadeIn .5s both}
+
 </style>
 </head>
 <body>
 <div id="stage">
+  <canvas id="fx" width="1920" height="1080"></canvas>
   <canvas id="confetti" width="1920" height="1080"></canvas>
 
   <div id="logo"><div class="box"><b>СВОЯ ИГРА</b><small>интеллектуальное шоу</small></div></div>
@@ -300,6 +309,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:Ari
       </g>
     </svg>
     <div class="catLabel">КОТ В МЕШКЕ!</div>
+    <div class="waitHint">ведущий управляет — вопрос появится по его команде</div>
   </div>
 
   <div id="splash"><span id="splashText">РАУНД 2</span></div>
@@ -359,6 +369,12 @@ function migrate(s){
   s.meta.boardVisible = !!s.meta.boardVisible;
   s.meta.winner = s.meta.winner || null;
   s.meta.musicUrl = String(s.meta.musicUrl || "");
+  s.meta.introUrl = String(s.meta.introUrl || "");
+  s.meta.introOn = !!s.meta.introOn;
+  s.meta.closingUrl = String(s.meta.closingUrl || "");
+  s.meta.closingOn = !!s.meta.closingOn;
+  s.meta.snowOn = !!s.meta.snowOn;
+  s.meta.confettiOn = !!s.meta.confettiOn;
   s.live = s.live || {};
   s.live.round = Math.max(0, Math.round(+s.live.round || 0));
   s.live.phase = s.live.phase || "idle";
@@ -582,6 +598,8 @@ function render(){
   handleTitle();
   phaseMachine();
   winnerMachine();
+  sbMachine();   // стробоскопы звука «Интро»/«Закрытие» по галочкам пульта
+  fxKick();      // фон из снега/конфетти по галочкам пульта
   if (state.meta.winner) $("soundBtn").classList.remove("show");
 }
 /* ===================== фазы вопроса/ответа ===================== */
@@ -648,30 +666,53 @@ function startSelectAnim(){
 /* --- кот --- */
 let catKeyDone = "";
 function keyOfCell(cell){ return cell ? cell.r + "/" + cell.t + "/" + cell.c + "@" + (state.live.ts||0) : ""; }
-function showCatIntro(){
-  $("catIntro").classList.remove("on"); void $("catIntro").offsetWidth;
-  $("catIntro").classList.add("on");
+function showCatIntro(waiting){
+  const ci = $("catIntro");
+  ci.classList.remove("on"); void ci.offsetWidth;
+  ci.classList.add("on");
+  ci.classList.toggle("waiting", !!waiting);
 }
 function hideCatIntro(){ $("catIntro").classList.remove("on"); }
 
-/* --- мелодия --- */
-let audioEl = null, soundBlocked = false;
-function playMusic(u){
-  if (!u) return;
-  try{
-    if (!audioEl) audioEl = new Audio();
-    if (audioEl.src !== u){ audioEl.src = u; }
-    audioEl.loop = true; audioEl.currentTime = 0;
-    audioEl.play().then(()=>{ soundBlocked = false; $("soundBtn").classList.remove("show"); })
-      .catch(()=>{ soundBlocked = true; $("soundBtn").classList.add("show"); });
-  }catch(e){ soundBlocked = true; $("soundBtn").classList.add("show"); }
+/* --- звук: всегда включён; автозапуск мелодий; разблокировка по первому касанию/клавише --- */
+const audioRoles = {};           // роль -> {el, url}
+const blockedAudios = new Set(); // затребованное браузером по autoplay-политике
+function getRoleAudio(role, u){
+  let r = audioRoles[role];
+  if (!r || r.url !== u){
+    if (r){ try{ r.el.pause(); }catch(e){} }
+    r = audioRoles[role] = {el: new Audio(u), url: u};
+  }
+  return r.el;
 }
-function stopMusic(){ if (audioEl){ try{ audioEl.pause(); }catch(e){} } }
-$("soundBtn").addEventListener("click", ()=>{
-  soundBlocked = false; $("soundBtn").classList.remove("show");
-  playMusic(state.meta.musicUrl);
-  if (state.live.phase !== "question" || !cellByRef(state.live.cell||{})) stopMusic();
-});
+function playRole(role, u, loop){
+  if (!u) return;
+  let el;
+  try{ el = getRoleAudio(role, u); }catch(e){ return; }
+  el.loop = !!loop;
+  try{ el.currentTime = 0; }catch(e){}
+  const p = el.play();
+  if (p && p.then) p.then(()=>{
+      blockedAudios.delete(el); $("soundBtn").classList.remove("show");
+    }).catch(()=>{
+      if (!blockedAudios.has(el)) blockedAudios.add(el);
+      $("soundBtn").classList.add("show");
+    });
+}
+function stopRole(role){
+  const r = audioRoles[role];
+  if (r){ try{ r.el.pause(); }catch(e){} }
+}
+function stopAllSound(){ stopRole("jingle"); stopRole("intro"); stopRole("closing"); }
+function unlockAudios(){
+  for (const el of Array.from(blockedAudios)){ try{ el.play().catch(()=>{}); }catch(e){} }
+  blockedAudios.clear();
+  $("soundBtn").classList.remove("show");
+}
+addEventListener("pointerdown", unlockAudios, true);
+addEventListener("keydown", unlockAudios, true);
+$("soundBtn").addEventListener("click", unlockAudios);
+
 
 /* --- машина фаз --- */
 function phaseMachine(){
@@ -682,32 +723,31 @@ function phaseMachine(){
   const prev = phaseKey; phaseKey = key;
 
   if (live.phase === "select"){
-    hideCards(false); hideCatIntro(); stopMusic();
+    hideCards(false); hideCatIntro(); stopAllSound();
     startSelectAnim();
+    return;
+  }
+  if (live.phase === "cat"){
+    // Кот в мешке: анимация и джингл (1 раз, НЕ по таймеру) продолжаются,
+    // пока ведущий не нажмёт «показать вопрос» на пульте.
+    hideCards(false);
+    showCatIntro(true);
+    reapplySelectClass();
+    if (catKeyDone !== key){ catKeyDone = key; playRole("jingle", state.meta.musicUrl, false); }
     return;
   }
   if (live.phase === "question"){
     if (shownCardKey === key) return; // карточка уже показана (дубль записи)
     reapplySelectClass();
     const data = cell ? (cell.q || {}) : {};
-    if (cell && cell.cat && catKeyDone !== key){
-      catKeyDone = key;
-      fillCard($("cardQ"), data, "ВОПРОС");
-      $("cardA").classList.add("hidden");
-      showCatIntro();
-      playMusic(state.meta.musicUrl);
-      pt(()=>{ hideCatIntro(); $("modalWrap").classList.add("on"); showCard($("cardQ"), key); stopMusic(); }, 2600);
-      pt(()=>fitCard(curCard), 2750);
-    } else {
-      hideCatIntro(); stopMusic();
-      fillCard($("cardQ"), data, "ВОПРОС");
-      $("cardA").classList.add("hidden");
-      showCard($("cardQ"), key);
-    }
+    hideCatIntro(); stopRole("jingle");
+    fillCard($("cardQ"), data, "ВОПРОС");
+    $("cardA").classList.add("hidden");
+    showCard($("cardQ"), key);
     return;
   }
   if (live.phase === "answer"){
-    hideCatIntro(); stopMusic();
+    hideCatIntro(); stopRole("jingle");
     const data = cell ? (cell.a || {}) : {};
     if (shownCardKey && shownCardKey.indexOf(live.phase+"|") !== 0){
       // плавная смена: вопрос гаснет (0.95с), затем ответ появляется (1с)
@@ -725,7 +765,65 @@ function phaseMachine(){
     return;
   }
   /* idle */
-  hideCards(false); hideCatIntro(); stopMusic();
+  hideCards(false); hideCatIntro(); stopAllSound();
+}
+
+/* ===================== звук по галочкам пульта: интро / закрытие ===================== */
+let sbIntroOn = null, sbClosingOn = null;
+function sbMachine(){
+  const m = state.meta || {};
+  if (m.introOn !== sbIntroOn){ sbIntroOn = m.introOn; if (m.introOn) playRole("intro", m.introUrl, false); else stopRole("intro"); }
+  if (m.closingOn !== sbClosingOn){ sbClosingOn = m.closingOn; if (m.closingOn) playRole("closing", m.closingUrl, false); else stopRole("closing"); }
+}
+
+/* ===================== фон: снег и конфетти (canvas #fx, под плашкой) ===================== */
+const fxCanvas = $("fx"), fxCtx = fxCanvas.getContext("2d");
+let fxFlakes = [], fxConf = [], fxRunning = false;
+function newFlake(anywhere){
+  return { x: Math.random()*1920, y: anywhere ? Math.random()*1080 : -10,
+    r: 1.6+Math.random()*3.2, vx: -0.4+Math.random()*0.8, vy: 0.6+Math.random()*1.5,
+    ph: Math.random()*6, sp: 0.01+Math.random()*0.03, a: .35+Math.random()*.5 };
+}
+function newFConf(anywhere){
+  return { x: Math.random()*1920, y: anywhere ? Math.random()*1080 : -20,
+    w: 8+Math.random()*8, h: 12+Math.random()*8,
+    vx: -1+Math.random()*2, vy: 1.8+Math.random()*2.6, rot: Math.random()*3, vr: -.1+Math.random()*.2,
+    a: .9, c: ["#ffd75e","#ff5c5c","#5ecbff","#7dff8a","#ffffff","#c78bff"][Math.floor(Math.random()*6)] };
+}
+function fxKick(){ if (!fxRunning){ fxRunning = true; setTimeout(fxLoop, 30); } }
+function fxLoop(){
+  const snowOn = !!state.meta.snowOn, confOn = !!state.meta.confettiOn;
+  if (snowOn) while (fxFlakes.length < 130) fxFlakes.push(newFlake(true));
+  if (confOn) while (fxConf.length < 90) fxConf.push(newFConf(true));
+  fxCtx.clearRect(0,0,1920,1080);
+  for (let i=fxFlakes.length-1; i>=0; i--){
+    const s = fxFlakes[i];
+    s.ph += s.sp; s.x += s.vx + Math.sin(s.ph)*0.6; s.y += s.vy;
+    if (!snowOn){ s.vy += 0.12; s.a -= 0.03; } // выключили: ускоряемся и растворяемся
+    if (s.a <= 0){ fxFlakes.splice(i,1); continue; }
+    if (s.y > 1100 || s.x < -30 || s.x > 1950){
+      if (snowOn){ s.y = -10; s.x = Math.random()*1920; } else { fxFlakes.splice(i,1); continue; }
+    }
+    fxCtx.globalAlpha = Math.max(0, s.a); fxCtx.beginPath(); fxCtx.arc(s.x, s.y, s.r, 0, 6.29);
+    fxCtx.fillStyle = "#fff"; fxCtx.fill();
+  }
+  for (let i=fxConf.length-1; i>=0; i--){
+    const p = fxConf[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.015; p.rot += p.vr;
+    if (!confOn){ p.vy += 0.35; p.a -= 0.05; } // выключили: падают быстрее и гаснут
+    if (p.a <= 0){ fxConf.splice(i,1); continue; }
+    if (p.y > 1100){
+      if (confOn){ p.y = -20; p.x = Math.random()*1920; p.vy = 1.8+Math.random()*2.6; }
+      else { fxConf.splice(i,1); continue; }
+    }
+    fxCtx.globalAlpha = p.a; fxCtx.save(); fxCtx.translate(p.x,p.y); fxCtx.rotate(p.rot);
+    fxCtx.fillStyle = p.c; fxCtx.fillRect(-p.w/2,-p.h/2,p.w,p.h); fxCtx.restore();
+  }
+  fxCtx.globalAlpha = 1;
+  if (!snowOn && !confOn && !fxFlakes.length && !fxConf.length){
+    fxRunning = false; fxCtx.clearRect(0,0,1920,1080); return;
+  }
+  setTimeout(fxLoop, 45);
 }
 
 /* ===================== победитель ===================== */
@@ -746,7 +844,7 @@ function winnerMachine(){
   winnerState = w; winnerForceShow = true; renderPlayers();
   const box = $("pb-" + w);
   for (const k of ["p1","p2","p3"]) $("pb-"+k).classList.remove("winblink","winbig");
-  hideCards(true); hideCatIntro(); stopMusic();
+  hideCards(true); hideCatIntro(); stopAllSound();
   box.classList.add("winblink");
   winnerTimers.push(setTimeout(()=>{ box.classList.remove("winblink"); box.classList.add("winbig"); $("playersRow").classList.add("playersDim"); }, 1250));
   winnerTimers.push(setTimeout(()=>{
@@ -881,7 +979,7 @@ function applyShowParam(){
     if (show === "q")    set(pick(0,0,0), "question");
     if (show === "qimg") set(pick(0,0,4), "question");
     if (show === "a")  { set(pick(1,1,0), "question"); setTimeout(()=>{ state.live.phase = "answer"; scheduleRender(); }, 2500); }
-    if (show === "cat")  set(pick(0,1,2), "question");
+    if (show === "cat")  set(pick(0,1,2), "cat");
     if (show === "win"){ state.meta.winner = "p2"; state.players.p2.score = 2400; }
     scheduleRender();
   }, 1200);
